@@ -1,0 +1,115 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "python-template"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "barrettMCW", email = "mjbarrett@mcw.edu" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = ["pyyaml"]
+
+[project.urls]
+Documentation = "https://github.com/LavLabInfrastructure/python-template#readme"
+Issues = "https://github.com/LavLabInfrastructure/python-template/issues"
+Source = "https://github.com/LavLabInfrastructure/python-template"
+
+[tool.hatch.version]
+path = "src/python_template/__about__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/python_template"]
+
+[tool.hatch.env]
+requires = [
+    "hatch-pip-compile"
+]
+
+[tool.hatch.envs.default]
+type = "pip-compile"
+pip-compile-hashes = true
+dependencies = []
+
+[tool.hatch.envs.default.scripts]
+build = "hatch build && chmod -R 777 dist/*"
+
+[tool.hatch.envs.test]
+dependencies = [
+  "pytest",
+  "pytest-cov",
+  "coverage[toml]>=6.2"
+]
+[tool.hatch.envs.test.scripts]
+test = "pytest {args:tests}"
+cov = "pytest --cov=src --cov-report=term-missing {args:tests}"
+
+[tool.hatch.envs.lint]
+dependencies = [
+  "pytest",
+  "pylint",
+  "black"
+]
+[tool.hatch.envs.lint.scripts]
+lint = "pylint src tests"
+format = "black src tests"
+check = "black src tests --check"
+
+[tool.hatch.envs.types]
+dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/python_template tests}"
+
+[tool.hatch.envs.docs]
+dependencies = [
+  "mkdocs",
+  "mkdocstrings",
+  "mkdocs-material",
+  "mkdocs-autorefs",
+  "mkdocs-minify-plugin",
+  "mkdocs-material-extensions",
+  "mkdocs-git-revision-date-localized-plugin"
+]
+[tool.hatch.envs.docs.scripts]
+build-docs = "mkdocs build"
+serve-docs = "mkdocs serve"
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+[tool.coverage.run]
+source_pkgs = ["python_template", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/python_template/__about__.py",
+]
+
+[tool.coverage.paths]
+python_template = ["src/python_template", "*/python-template/src/python_template"]
+tests = ["tests", "*/python-template/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]

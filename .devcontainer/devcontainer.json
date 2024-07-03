@@ -1,0 +1,35 @@
+{
+    "name": "Python 3",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "..",
+        "target": "dev"
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "python.defaultInterpreterPath": "/usr/bin/python3",
+                "autoDocstring.docstringFormat": "sphinx"
+            },
+            "extensions": [
+                "ms-toolsai.jupyter",
+                "ms-python.python",
+                "ms-python.pylint",
+                "ms-python.black-formatter",
+                "ms-python.isort",
+                "ms-python.mypy-type-checker",
+                "editorconfig.editorconfig",
+                "njpwerner.autodocstring",
+                "lextudio.restructuredtext",
+                "littlefoxteam.vscode-python-test-adapter",
+                "tombonnike.vscode-status-bar-format-toggle",
+                "usernamehw.errorlens",
+                "Gruntfuggly.todo-tree",
+                "eamodio.gitlens",
+                "github.vscode-github-actions"
+            ]
+        }
+    },
+    "remoteUser": "vscode"
+}

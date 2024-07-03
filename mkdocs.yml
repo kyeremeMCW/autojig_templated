@@ -1,0 +1,14 @@
+site_name: Python Template
+theme:
+  name: material
+
+plugins:
+  - mkdocstrings
+  - git-revision-date-localized
+  - minify:
+      minify_html: true
+  - autorefs
+
+nav:
+  - Home: index.md
+  - About: about.md

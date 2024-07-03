@@ -1,0 +1,19 @@
+name: PyLint with Black
+
+on: 
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Docker image
+      run: docker build --target hatch -t myapp:hatch .
+    - name: Apply formatting with Black
+      run: docker run --rm -e HATCH_ENV=lint -v "${{ github.workspace }}:/app" myapp:hatch format
+    - name: Run Pylint
+      run: docker run --rm -e HATCH_ENV=lint -v "${{ github.workspace }}:/app" myapp:hatch lint
