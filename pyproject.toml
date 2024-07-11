@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "python-template"
+name = "gimme-jig"
 dynamic = ["version"]
 description = ''
 readme = "README.md"
@@ -11,7 +11,7 @@ requires-python = ">=3.8"
 license = "MIT"
 keywords = []
 authors = [
-  { name = "barrettMCW", email = "mjbarrett@mcw.edu" },
+  { name = "kyeremeMCW", email = "fkyereme@mcw.edu" },
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -24,18 +24,28 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["pyyaml"]
+
+dependencies = [
+  "pyyaml",
+  "typing",
+  "argparse",
+  "nibabel",
+  "numpy",
+  "vtk",
+  "cadquery",
+  "stl",
+  ]
 
 [project.urls]
-Documentation = "https://github.com/LavLabInfrastructure/python-template#readme"
-Issues = "https://github.com/LavLabInfrastructure/python-template/issues"
-Source = "https://github.com/LavLabInfrastructure/python-template"
+Documentation = "https://github.com/LavLabInfrastructure/gimme-jig#readme"
+Issues = "https://github.com/LavLabInfrastructure/gimme-jig/issues"
+Source = "https://github.com/LavLabInfrastructure/gimme-jig"
 
 [tool.hatch.version]
-path = "src/python_template/__about__.py"
+path = "src/gimme_jig/__about__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/python_template"]
+packages = ["src/gimme_jig"]
 
 [tool.hatch.env]
 requires = [
@@ -76,7 +86,7 @@ dependencies = [
   "mypy>=1.0.0",
 ]
 [tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/python_template tests}"
+check = "mypy --install-types --non-interactive {args:src/gimme_jig tests}"
 
 [tool.hatch.envs.docs]
 dependencies = [
@@ -96,16 +106,16 @@ serve-docs = "mkdocs serve"
 python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
 [tool.coverage.run]
-source_pkgs = ["python_template", "tests"]
+source_pkgs = ["gimme_jig", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/python_template/__about__.py",
+  "src/gimme_jig/__about__.py",
 ]
 
 [tool.coverage.paths]
-python_template = ["src/python_template", "*/python-template/src/python_template"]
-tests = ["tests", "*/python-template/tests"]
+gimme_jig = ["src/gimme_jig", "*/gimme-jig/src/gimme_jig"]
+tests = ["tests", "*/gimme-jig/tests"]
 
 [tool.coverage.report]
 exclude_lines = [
