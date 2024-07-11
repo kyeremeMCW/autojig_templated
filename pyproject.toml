@@ -34,6 +34,9 @@ dependencies = [
   "vtk",
   "cadquery",
   "stl",
+  "tempfile",
+  "time",
+  "logging"
   ]
 
 [project.urls]
