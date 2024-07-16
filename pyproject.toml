@@ -27,16 +27,11 @@ classifiers = [
 
 dependencies = [
   "pyyaml",
-  "typing",
-  "argparse",
   "nibabel",
-  "numpy",
+  "numpy==1.23",
+  "numpy-stl",
   "vtk",
   "cadquery",
-  "stl",
-  "tempfile",
-  "time",
-  "logging"
   ]
 
 [project.urls]
