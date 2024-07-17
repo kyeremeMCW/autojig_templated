@@ -1,4 +1,4 @@
-"""_summary_"""
+"""Python script for generating slicing jigs. Optionally creates a smoothed mold of the organ with provided nifti mask. """
 import time
 import logging
 from typing import cast
@@ -18,22 +18,10 @@ X_WALL = 5
 Y_WALL = 3
 Z_WALL = 3
 
-DEFAULT_NIFTI_PATH = (
-    "/Volumes/Siren/Prostate_data/1556/MRI/Processed/prostate_mask.nii.gz"
-)
-DEFAULT_MOLD_STL_PATH = (
-    "/Volumes/Siren/Prostate_data/1556/MRI/Processed/autojigger_mold.stl"
-)
-DEFAULT_JIG_STL_PATH = (
-    "/Volumes/Siren/Prostate_data/1556/MRI/Processed/autojigger_slicer.stl"
-)
-
-
-# todo: pyproject.toml WIP
+# todo: pyproject.toml DONE-ish?
 # todo: pypi upload/ github actions WIP
 # todo: docs WIP
 # todo: profiles (eventually) WIP
-
 
 def find_slice_thickness(nifti_path: str) -> np.float32:
     """Finds the slice thickness of the given nifti file
