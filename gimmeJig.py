@@ -3,12 +3,13 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, Sequence, Tuple, cast
 
 import numpy as np
 from numpy.typing import NDArray
 from nibabel.loadsave import load as nib_load
 from nibabel.nifti1 import Nifti1Header, Nifti1Image
+from nibabel.affines import apply_affine, voxel_sizes
 from nibabel.orientations import aff2axcodes
 from scipy.ndimage import binary_fill_holes, generate_binary_structure, label
 
@@ -36,8 +37,8 @@ class NiftiVolume:
 
     @property
     def voxel_spacing(self) -> Tuple[float, ...]:
-        zooms = self.header.get_zooms()
-        return tuple(float(v) for v in zooms[: self.ndim])
+        sizes = voxel_sizes(self.affine)
+        return tuple(float(v) for v in sizes[: self.ndim])
 
     @property
     def orientation_codes(self) -> Tuple[str, ...]:
@@ -77,6 +78,36 @@ class MaskPreprocessResult:
     processed_voxel_count: int
     component_sizes: IntArray
     warnings: List[str]
+
+
+@dataclass
+class JigParameterConfig:
+    """Parameters controlling jig sizing and orientation."""
+
+    padding_mm: float | Sequence[float] = 5.0
+    orientation_axis: Optional[int] = None
+    use_physical_spacing: bool = True
+
+
+@dataclass
+class JigParameters:
+    """Computed dimensions and transforms needed to build the jig shell."""
+
+    mask_bbox_min_vox: np.ndarray
+    mask_bbox_max_vox: np.ndarray
+    jig_bbox_min_vox: np.ndarray
+    jig_bbox_max_vox: np.ndarray
+    mask_bbox_min_mm: np.ndarray
+    mask_bbox_max_mm: np.ndarray
+    jig_bbox_min_mm: np.ndarray
+    jig_bbox_max_mm: np.ndarray
+    mask_size_mm: np.ndarray
+    jig_size_mm: np.ndarray
+    padding_mm: np.ndarray
+    orientation_axis: int
+    voxel_spacing: np.ndarray
+    orientation_codes: Tuple[str, str, str]
+    orientation_reason: str
 
 
 def load_nifti(
@@ -203,4 +234,121 @@ def preprocess_mask(
         processed_voxel_count=processed_voxel_count,
         component_sizes=component_sizes.astype(np.int64, copy=True),
         warnings=messages,
+    )
+
+
+def _voxel_indices_from_mask(mask: BoolArray) -> np.ndarray:
+    indices = np.argwhere(mask)
+    if indices.size == 0:
+        raise ValueError("Mask contains no true voxels for bounding box computation.")
+    return indices
+
+
+def _normalize_padding(padding: float | Sequence[float]) -> np.ndarray:
+    if isinstance(padding, (int, float, np.floating)) and not isinstance(padding, bool):
+        value = float(padding)
+        arr = np.full(3, value, dtype=np.float64)
+    else:
+        sequence = cast(Sequence[float], padding)
+        try:
+            seq = tuple(sequence)
+        except TypeError as err:
+            raise ValueError("Padding must be a scalar or an iterable of three floats.") from err
+        arr = np.asarray(seq, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"Padding sequence must contain exactly three values (x, y, z); got shape {arr.shape}."
+            )
+    if np.any(arr < 0):
+        raise ValueError("Padding values must be non-negative.")
+    return arr
+
+
+def derive_orientation_axis(voxel_spacing: np.ndarray, override: Optional[int]) -> Tuple[int, str]:
+    if override is not None:
+        if override < 0 or override >= voxel_spacing.size:
+            raise ValueError(
+                f"Orientation override {override} out of range for spacing vector of length {voxel_spacing.size}."
+            )
+        return override, "user override"
+
+    axis = int(np.argmax(voxel_spacing))
+    return axis, "coarsest voxel dimension"
+
+
+def compute_jig_parameters(
+    volume: NiftiVolume,
+    mask_result: MaskPreprocessResult,
+    config: Optional[JigParameterConfig] = None,
+) -> JigParameters:
+    """Derive bounding boxes and orientation cues for jig construction."""
+
+    cfg = config or JigParameterConfig()
+
+    mask = mask_result.mask
+    voxel_indices = _voxel_indices_from_mask(mask)
+    min_indices = voxel_indices.min(axis=0)
+    max_indices = voxel_indices.max(axis=0)
+
+    voxel_spacing = np.array(volume.voxel_spacing, dtype=float)
+    if voxel_spacing.size != 3:
+        raise ValueError(f"Expected 3 spacing values, got {voxel_spacing.size}.")
+
+    orientation_axis, orientation_reason = derive_orientation_axis(voxel_spacing, cfg.orientation_axis)
+
+    mask_bbox_min_vox = min_indices.astype(np.float64)
+    mask_bbox_max_vox = max_indices.astype(np.float64)
+
+    # Physical-space bounds derived from voxel edges for robustness to affine rotations/translations.
+    corner_grid = np.array(
+        np.meshgrid(
+            [mask_bbox_min_vox[0] - 0.5, mask_bbox_max_vox[0] + 0.5],
+            [mask_bbox_min_vox[1] - 0.5, mask_bbox_max_vox[1] + 0.5],
+            [mask_bbox_min_vox[2] - 0.5, mask_bbox_max_vox[2] + 0.5],
+            indexing="ij",
+        )
+    )
+    corner_points = corner_grid.reshape(3, -1).T
+    corner_points_mm = apply_affine(volume.affine, corner_points)
+    mask_bbox_min_mm = corner_points_mm.min(axis=0)
+    mask_bbox_max_mm = corner_points_mm.max(axis=0)
+
+    voxel_extent = mask_bbox_max_vox - mask_bbox_min_vox + 1.0
+    mask_size_mm = voxel_extent * voxel_spacing
+
+    padding_vec = _normalize_padding(cfg.padding_mm)
+    half_padding = padding_vec / 2.0
+
+    padding_vox = padding_vec / voxel_spacing
+    half_padding_vox = padding_vox / 2.0
+
+    jig_bbox_min_vox = mask_bbox_min_vox - half_padding_vox
+    jig_bbox_max_vox = mask_bbox_max_vox + half_padding_vox
+
+    jig_bbox_min_mm = mask_bbox_min_mm - half_padding
+    jig_bbox_max_mm = mask_bbox_max_mm + half_padding
+    jig_size_mm = jig_bbox_max_mm - jig_bbox_min_mm
+
+    orientation_codes = tuple(volume.orientation_codes)
+    if len(orientation_codes) != 3:
+        raise ValueError(
+            f"Expected 3 orientation codes for a 3D volume, got {orientation_codes}."
+        )
+
+    return JigParameters(
+        mask_bbox_min_vox=mask_bbox_min_vox,
+        mask_bbox_max_vox=mask_bbox_max_vox,
+    jig_bbox_min_vox=jig_bbox_min_vox,
+    jig_bbox_max_vox=jig_bbox_max_vox,
+        mask_bbox_min_mm=mask_bbox_min_mm,
+        mask_bbox_max_mm=mask_bbox_max_mm,
+        jig_bbox_min_mm=jig_bbox_min_mm,
+        jig_bbox_max_mm=jig_bbox_max_mm,
+        mask_size_mm=mask_size_mm,
+        jig_size_mm=jig_size_mm,
+        padding_mm=padding_vec,
+        orientation_axis=orientation_axis,
+        voxel_spacing=voxel_spacing,
+        orientation_codes=cast(Tuple[str, str, str], orientation_codes),
+        orientation_reason=orientation_reason,
     )
