@@ -1,7 +1,0 @@
-dist
-.*
-!.git
-!.github
-!.gitignore
-!.devcontainer
-__pycache__
